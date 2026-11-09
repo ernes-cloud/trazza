@@ -1,0 +1,635 @@
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+/* Fuentes autoalojadas (public/fonts/*.woff2) — sin Google Fonts (M-C). */
+@layer base {
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/inter-400.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/inter-500.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/inter-600.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/inter-700.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/fraunces-400.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/fraunces-600.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/fraunces-700.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 900;
+    font-display: swap;
+    src: url('/fonts/fraunces-900.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-400.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-500.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-600.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-700.woff2') format('woff2');
+  }
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@theme {
+  /* Alturas de línea de Tailwind 3, en rem. v4 las expresa como PROPORCIÓN
+     (text-sm = 1.4286), y un hijo con letra más pequeña —las pastillas
+     text-[10px] dentro de un text-sm— hereda la proporción en vez de los 20 px
+     y encoge: medido, el título del aviso de la demo pasaba de 26 a 20 px.
+     Con rem el ritmo vertical queda como se diseñó. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --font-display: Fraunces, Georgia, serif;
+  --font-ledger: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-slate-50: #faf7f0;
+  --color-slate-100: #f1ece1;
+  --color-slate-200: #e3ddd0;
+  --color-slate-300: #c8cfd9;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #16213a;
+  --color-slate-800: #0d1526;
+  --color-slate-900: #070d18;
+  --color-slate-950: #040813;
+
+  /* Paleta de Tailwind 3 (hex) para las familias que usa el código. v4 la
+     redefine en OKLCH, más saturada (blue-600: #2563eb → ~#155dfc), y las
+     decisiones de contraste del proyecto (blue-600 como texto de acento en las
+     páginas públicas, los -600 sobre papel) se midieron con estos valores.
+     Generada desde tailwindcss@3/colors.js; si se usa una familia nueva, añádela. */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-red-950: #450a0a;
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  --color-orange-800: #9a3412;
+  --color-orange-900: #7c2d12;
+  --color-orange-950: #431407;
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-amber-950: #451a03;
+  --color-yellow-50: #fefce8;
+  --color-yellow-100: #fef9c3;
+  --color-yellow-200: #fef08a;
+  --color-yellow-300: #fde047;
+  --color-yellow-400: #facc15;
+  --color-yellow-500: #eab308;
+  --color-yellow-600: #ca8a04;
+  --color-yellow-700: #a16207;
+  --color-yellow-800: #854d0e;
+  --color-yellow-900: #713f12;
+  --color-yellow-950: #422006;
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #bbf7d0;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+  --color-green-800: #166534;
+  --color-green-900: #14532d;
+  --color-green-950: #052e16;
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
+  --color-teal-50: #f0fdfa;
+  --color-teal-100: #ccfbf1;
+  --color-teal-200: #99f6e4;
+  --color-teal-300: #5eead4;
+  --color-teal-400: #2dd4bf;
+  --color-teal-500: #14b8a6;
+  --color-teal-600: #0d9488;
+  --color-teal-700: #0f766e;
+  --color-teal-800: #115e59;
+  --color-teal-900: #134e4a;
+  --color-teal-950: #042f2e;
+  --color-sky-50: #f0f9ff;
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;
+  --color-sky-700: #0369a1;
+  --color-sky-800: #075985;
+  --color-sky-900: #0c4a6e;
+  --color-sky-950: #082f49;
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+  --color-indigo-50: #eef2ff;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+  --color-indigo-700: #4338ca;
+  --color-indigo-800: #3730a3;
+  --color-indigo-900: #312e81;
+  --color-indigo-950: #1e1b4b;
+  --color-violet-50: #f5f3ff;
+  --color-violet-100: #ede9fe;
+  --color-violet-200: #ddd6fe;
+  --color-violet-300: #c4b5fd;
+  --color-violet-400: #a78bfa;
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #7c3aed;
+  --color-violet-700: #6d28d9;
+  --color-violet-800: #5b21b6;
+  --color-violet-900: #4c1d95;
+  --color-violet-950: #2e1065;
+  --color-purple-50: #faf5ff;
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-300: #d8b4fe;
+  --color-purple-400: #c084fc;
+  --color-purple-500: #a855f7;
+  --color-purple-600: #9333ea;
+  --color-purple-700: #7e22ce;
+  --color-purple-800: #6b21a8;
+  --color-purple-900: #581c87;
+  --color-purple-950: #3b0764;
+  --color-fuchsia-50: #fdf4ff;
+  --color-fuchsia-100: #fae8ff;
+  --color-fuchsia-200: #f5d0fe;
+  --color-fuchsia-300: #f0abfc;
+  --color-fuchsia-400: #e879f9;
+  --color-fuchsia-500: #d946ef;
+  --color-fuchsia-600: #c026d3;
+  --color-fuchsia-700: #a21caf;
+  --color-fuchsia-800: #86198f;
+  --color-fuchsia-900: #701a75;
+  --color-fuchsia-950: #4a044e;
+  --color-pink-50: #fdf2f8;
+  --color-pink-100: #fce7f3;
+  --color-pink-200: #fbcfe8;
+  --color-pink-300: #f9a8d4;
+  --color-pink-400: #f472b6;
+  --color-pink-500: #ec4899;
+  --color-pink-600: #db2777;
+  --color-pink-700: #be185d;
+  --color-pink-800: #9d174d;
+  --color-pink-900: #831843;
+  --color-pink-950: #500724;
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-400: #fb7185;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #e11d48;
+  --color-rose-700: #be123c;
+  --color-rose-800: #9f1239;
+  --color-rose-900: #881337;
+  --color-rose-950: #4c0519;
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-ticker: ticker 40s linear infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes ticker {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* v4 quita el cursor de mano a los botones (vuelve al del navegador) y pinta
+     los placeholders con el color del texto al 50 %. La app se diseñó con los
+     de v3: se restauran aquí, igual que el color de borde de arriba. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@utility ledger-grid {
+  /* ── Ledger texture: faint broadsheet rule lines behind app surfaces ── */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 31px,
+    rgba(13, 21, 38, 0.035) 31px,
+    rgba(13, 21, 38, 0.035) 32px
+  );
+  .dark & {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 31px,
+      rgba(255, 255, 255, 0.022) 31px,
+      rgba(255, 255, 255, 0.022) 32px
+    );
+  }
+}
+
+@utility dark {
+  & .ledger-grid {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 31px,
+      rgba(255, 255, 255, 0.022) 31px,
+      rgba(255, 255, 255, 0.022) 32px
+    );
+  }
+  & .custom-scrollbar {
+    scrollbar-color: var(--color-slate-600) transparent;
+  }
+  & .custom-scrollbar-x {
+    scrollbar-color: var(--color-slate-600) transparent;
+  }
+}
+
+@utility rule-t {
+  /* Hairline rule matching the design-token border (1px broadsheet rule) */
+  border-top: 1px solid hsl(var(--border));
+}
+
+@utility rule-b {
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+@utility eyebrow {
+  /* Editorial eyebrow: uppercase mono micro-label used across the platform */
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.6875rem;
+  line-height: 1;
+}
+
+@utility no-scrollbar {
+  /* Hide scrollbar but keep scroll — used on broker tabs */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility scrollbar-thin {
+  /* Thin branded scrollbar for data tables */
+  &::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  /* El oscuro va en su propio bloque `.dark &::…`, nunca como `dark:` dentro del
+     pseudo-elemento: con `@custom-variant dark (&:is(.dark *))` eso genera
+     `::-webkit-scrollbar-thumb:is(.dark *)`, que el minificado deja en `:is()`
+     vacío (aviso en el build y el color oscuro no se aplicaba nunca). */
+  &::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+  .dark &::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+  .dark &::-webkit-scrollbar-thumb {
+    @apply bg-slate-600;
+  }
+}
+
+@utility custom-scrollbar {
+  /* Discreet scrollbar for widget lists that cap their height (dividendos,
+     earnings, favoritos, movimientos, búsqueda global). La clase se usaba en 5
+     componentes desde hace meses SIN estar definida en ninguna hoja de estilo:
+     el scroll funcionaba, pero se pintaba la barra nativa del sistema. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+  .dark & {
+    scrollbar-color: var(--color-slate-600) transparent;
+  }
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  /* Oscuro en bloques aparte: ver scrollbar-thin. */
+  &::-webkit-scrollbar-thumb {
+    @apply bg-slate-300/70 rounded-full;
+  }
+  .dark &::-webkit-scrollbar-thumb {
+    @apply bg-slate-600/70;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+  .dark &::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}
+
+@utility custom-scrollbar-x {
+  /* Tira horizontal de pestañas (listas de favoritos): barra SIEMPRE visible,
+     pero discreta. Antes iban con `no-scrollbar`, así que con muchas listas no
+     había manera de saber que quedaban más a la derecha salvo arrastrar a
+     ciegas. Se ve en reposo a propósito — es la señal de "hay más" — y se
+     oscurece al pasar por encima. Más fina que la vertical (5 px) porque cruza
+     el ancho entero y una gruesa compite con las pestañas. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+  .dark & {
+    scrollbar-color: var(--color-slate-600) transparent;
+  }
+  &::-webkit-scrollbar {
+    height: 5px;
+  }
+  /* Oscuro en bloques aparte: ver scrollbar-thin. */
+  &::-webkit-scrollbar-track {
+    @apply bg-slate-100/70 rounded-full;
+  }
+  .dark &::-webkit-scrollbar-track {
+    @apply bg-slate-700/30;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+  .dark &::-webkit-scrollbar-thumb {
+    @apply bg-slate-600;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+  .dark &::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}
+
+@layer base {
+  /* ──────────────────────────────────────────────────────────────────────
+     "Ledger" design tokens — shared by the whole platform.
+     :root  → light "paper" theme (warm bone page, navy ink)
+     .dark  → Ledger theme (deep navy broadsheet, slate-100 ink)
+     These feed Tailwind's bg-background / bg-card / bg-primary / border-border…
+     ────────────────────────────────────────────────────────────────────── */
+  :root {
+    --background: 43 50% 96%;
+    --foreground: 221 49% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 221 49% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 221 49% 10%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 43 35% 91%;
+    --secondary-foreground: 221 49% 10%;
+    --muted: 43 30% 92%;
+    --muted-foreground: 215 14% 40%;
+    --accent: 43 35% 91%;
+    --accent-foreground: 221 49% 10%;
+    --destructive: 350 84% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 22% 85%;
+    --input: 40 22% 84%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 219 55% 6%;
+    --foreground: 210 40% 96%;
+    --card: 221 49% 10%;
+    --card-foreground: 210 40% 96%;
+    --popover: 216 60% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 30% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 217 30% 14%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 16%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 350 89% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 216 24% 16%;
+    --input: 216 24% 18%;
+    --ring: 217 91% 60%;
+  }
+
+  body {
+    @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tabular numbers for financial data — prevents layout shift on updates */
+  .tabular-nums,
+  [data-financial] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}

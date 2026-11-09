@@ -1,0 +1,22 @@
+# Sync with tools/oss/export-oss.mjs DOCKERIGNORE_DEFAULT
+node_modules
+dist
+.git
+.env
+.env.*
+informes
+e2e/artifacts
+.claude
+.mcp.json
+.playwright-mcp
+deploy
+.gitlab-ci.yml
+docs/claude/production.md
+docs/claude/growth.md
+docs/claude/history.md
+SERVIDOR.md
+Plans.md
+plugins/visual-editor
+plugins/selection-mode
+plugins/utils
+plugins/vite-plugin-iframe-route-restoration.js

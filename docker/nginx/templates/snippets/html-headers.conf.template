@@ -1,0 +1,11 @@
+# Docker web image: rendered at container start from CSP_SUPABASE_ORIGIN (see .env.example).
+# CSP for the OSS Docker web image (tools/csp.test.js covers the Compose template).
+add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+add_header Pragma "no-cache" always;
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), midi=()" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; connect-src 'self' ${CSP_SUPABASE_ORIGIN} https://query1.finance.yahoo.com https://query2.finance.yahoo.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+expires 0;

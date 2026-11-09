@@ -1,0 +1,9 @@
+## Pages
+- [– Trazza](/admindashboard): No description available
+- [Dashboard — Trazza](/dashboard): No description available
+- [Untitled Page](/auth): No description available
+- [Untitled Page](/cartera): No description available
+- [Untitled Page](/expenses): No description available
+- [Untitled Page](/favorites): No description available
+- [Untitled Page](/notifications): No description available
+- [Untitled Page](/rebalancingcalculator): No description available

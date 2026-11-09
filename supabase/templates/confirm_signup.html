@@ -1,0 +1,75 @@
+<!--
+  Correo de confirmación de alta — plantilla de Supabase Auth.
+  NO se despliega sola: se pega a mano en Supabase → Authentication → Emails →
+  "Confirm signup" (cuerpo). Asunto recomendado:
+    Confirma tu cuenta de Trazza · Confirm your Trazza account
+  Idioma: `.Data.lang` ('es' | 'en'), que el alta guarda en los metadatos
+  (SupabaseAuthContext.signUp). Sin dato → español. Los `if` van anidados a
+  propósito: comparar un valor ausente con `eq` puede fallar en Go templates.
+  Lo que se promete aquí tiene que existir en la app.
+-->
+{{ $en := false }}{{ if .Data.lang }}{{ if eq .Data.lang "en" }}{{ $en = true }}{{ end }}{{ end }}
+<!DOCTYPE html>
+<html lang="{{ if $en }}en{{ else }}es{{ end }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ if $en }}Confirm your Trazza account{{ else }}Confirma tu cuenta de Trazza{{ end }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+    {{ if $en }}One click and your portfolio dashboard is ready.{{ else }}Un clic y tu panel de cartera está listo.{{ end }}
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+        <tr><td style="padding:22px 28px 0;">
+          <p style="margin:0;font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-0.2px;">Trazza</p>
+        </td></tr>
+        <tr><td style="padding:20px 28px 8px;">
+          <h1 style="margin:0;font-size:22px;line-height:1.3;font-weight:800;color:#0f172a;">
+            {{ if $en }}Confirm your account{{ else }}Confirma tu cuenta{{ end }}
+          </h1>
+          <p style="margin:12px 0 0;font-size:15px;line-height:1.55;color:#475569;">
+            {{ if $en }}You're one click away from seeing your whole portfolio in one place: every broker, your real return and your dividends.{{ else }}Estás a un clic de ver toda tu cartera en un solo sitio: todos tus brokers, tu rentabilidad real y tus dividendos.{{ end }}
+          </p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;">
+            <tr><td style="border-radius:8px;background:#2563eb;">
+              <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 24px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">
+                {{ if $en }}Confirm my account{{ else }}Confirmar mi cuenta{{ end }} &rarr;
+              </a>
+            </td></tr>
+          </table>
+          <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">
+            {{ if $en }}The link expires in 24 hours.{{ else }}El enlace caduca en 24 horas.{{ end }}
+          </p>
+        </td></tr>
+        <tr><td style="padding:18px 28px 6px;">
+          <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#2563eb;">
+            {{ if $en }}What you'll find{{ else }}Lo que te espera{{ end }}
+          </p>
+          <p style="margin:0 0 8px;font-size:14px;line-height:1.5;color:#334155;">📥 {{ if $en }}Import from DEGIRO, Interactive Brokers, MyInvestor, Trading 212 and Binance — or add positions by hand.{{ else }}Importa desde DEGIRO, Interactive Brokers, MyInvestor, Trading 212 y Binance, o añade posiciones a mano.{{ end }}</p>
+          <p style="margin:0 0 8px;font-size:14px;line-height:1.5;color:#334155;">📊 {{ if $en }}Real return (TWR), FIFO cost basis and a tax report.{{ else }}Rentabilidad real (TWR), coste FIFO e informe fiscal.{{ end }}</p>
+          <p style="margin:0 0 8px;font-size:14px;line-height:1.5;color:#334155;">🔔 {{ if $en }}Alerts for dividends, earnings and price targets.{{ else }}Avisos de dividendos, resultados y precios objetivo.{{ end }}</p>
+        </td></tr>
+        <tr><td style="padding:14px 28px 18px;">
+          <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
+            {{ if $en }}If the button doesn't work, copy this link into your browser:{{ else }}Si el botón no funciona, copia este enlace en tu navegador:{{ end }}<br>
+            <a href="{{ .ConfirmationURL }}" style="color:#64748b;word-break:break-all;">{{ .ConfirmationURL }}</a>
+          </p>
+        </td></tr>
+        <tr><td style="padding:14px 28px 18px;border-top:1px solid #f1f5f9;">
+          <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
+            {{ if $en }}You got this email because someone signed up on Trazza with this address. If it wasn't you, just ignore it.{{ else }}Te llega este correo porque alguien se ha registrado en Trazza con esta dirección. Si no has sido tú, ignóralo.{{ end }}
+          </p>
+          <p style="margin:8px 0 0;font-size:12px;color:#94a3b8;">
+            © Trazza ·
+            <a href="https://example.com/privacy" style="color:#64748b;">{{ if $en }}Privacy{{ else }}Privacidad{{ end }}</a> ·
+            <a href="https://example.com/terms" style="color:#64748b;">{{ if $en }}Terms{{ else }}Términos{{ end }}</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

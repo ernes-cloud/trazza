@@ -1,0 +1,21 @@
+import { chromium } from 'playwright';
+const OUT = process.env.OUT_DIR || '.';
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1100, height: 950 }, locale: 'es-ES', deviceScaleFactor: 2 });
+await page.goto('http://localhost:3000/auth', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(1200);
+const c = page.getByText('Aceptar todo', { exact: false }); if (await c.count()) await c.first().click().catch(()=>{});
+await page.getByText('Explorar demo', { exact: false }).first().click();
+await page.waitForURL('**/app**', { timeout: 20000 });
+await page.waitForTimeout(2500);
+await page.evaluate(() => { window.history.pushState({}, '', '/app/settings'); window.dispatchEvent(new PopStateEvent('popstate')); });
+await page.waitForTimeout(2500);
+await page.evaluate(() => {
+  document.querySelectorAll('button').forEach((b) => { if (/Aceptar todo/.test(b.textContent || '')) b.click(); });
+  const p = [...document.querySelectorAll('p')].find((x) => x.textContent.includes('Activa módulos opcionales'));
+  if (p) p.scrollIntoView({ block: 'start' });
+});
+await page.waitForTimeout(700);
+await page.screenshot({ path: `${OUT}/settings2.png` });
+console.log('ok');
+await browser.close();

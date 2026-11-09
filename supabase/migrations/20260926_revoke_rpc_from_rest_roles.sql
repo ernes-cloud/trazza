@@ -1,0 +1,51 @@
+-- APLICADA en Supabase el 2026-09-26. Verificado después: la ACL pasó de
+-- `{=X/postgres,postgres=X/postgres,service_role=X/postgres}` a
+-- `{postgres=X/postgres,service_role=X/postgres}` (el `=X` inicial es PUBLIC),
+-- y `has_function_privilege` da service_role=true, authenticated=false,
+-- anon=false. El linter dejó de reportarlas.
+--
+-- Quita del API REST dos funciones SECURITY DEFINER que nunca deberían haber
+-- sido llamables desde el cliente (detectado por el linter de Supabase el
+-- 2026-09-26, verificado contra los llamantes reales del repo).
+--
+-- POR QUÉ ES SEGURO REVOCAR A PUBLIC, las dos comprobaciones que se hicieron
+-- ANTES de aplicar:
+--
+--   a) `service_role` tiene GRANT EXPLÍCITO (`service_role=X/postgres` en la
+--      ACL), no heredado de PUBLIC. Si lo tuviera solo por PUBLIC, este REVOKE
+--      habría dejado sin cuota de IA a toda la plataforma.
+--
+--   b) Un trigger NO recomprueba EXECUTE al dispararse: Postgres lo valida al
+--      CREATE TRIGGER. Medido en esta misma BD con un esquema de usar y tirar
+--      (tabla + función SECURITY DEFINER de trigger con EXECUTE revocado +
+--      INSERT como `authenticated`): el INSERT pasa. Importa porque
+--      `handle_new_user_beta` cuelga del alta de usuarios en `auth.users`, y
+--      si la comprobación existiera este revoke habría roto el REGISTRO.
+--      Ojo al medirlo: si el rol de prueba tampoco tiene INSERT sobre la tabla,
+--      el fallo es un `insufficient_privilege` idéntico y se confunde con el
+--      de la función — hay que conceder el INSERT para aislar la causa.
+--
+-- 1) increment_ai_usage(p_user_id, p_feature, p_period)
+--    Es SECURITY DEFINER, recibe el user_id como ARGUMENTO y solo incrementa.
+--    Con EXECUTE para `anon` y `authenticated` quedaba expuesta en
+--    /rest/v1/rpc/increment_ai_usage, así que cualquiera —incluso sin iniciar
+--    sesión— podía quemarle la cuota diaria y mensual de IA a otro usuario
+--    conociendo su UUID, o ensuciar `ai_usage` con filas inventadas. No permite
+--    escalar (solo suma, nunca resta), pero sí denegar una función de pago.
+--
+--    El ÚNICO llamante legítimo es server/routes/rateLimiter.js, que usa
+--    `supabaseAdmin` (service_role) — y el service_role no pasa por estos
+--    GRANTs, así que revocar no rompe nada. Verificado: no hay ninguna llamada
+--    desde src/ ni desde api/.
+--
+-- 2) handle_new_user_beta()
+--    Es una función de TRIGGER (RETURNS trigger) sobre el alta de usuarios.
+--    Invocarla por RPC falla —`NEW` no existe fuera de un trigger— así que el
+--    riesgo práctico es bajo, pero no pinta nada en la superficie pública.
+--
+-- Revocar de PUBLIC además de los dos roles: `anon` y `authenticated` heredan
+-- de PUBLIC, y sin esta línea el GRANT por defecto de PostgreSQL los volvería
+-- a habilitar.
+
+REVOKE EXECUTE ON FUNCTION public.increment_ai_usage(uuid, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user_beta() FROM PUBLIC, anon, authenticated;

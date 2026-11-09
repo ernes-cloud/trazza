@@ -1,0 +1,14 @@
+-- Aviso de fin de un gasto/ingreso recurrente.
+--
+-- Una plantilla con `recurrence_until` deja de generar movimientos ese día sin
+-- decir nada: te enteras cuando echas de menos el apunte, o peor, cuando sigues
+-- pagando algo que creías cancelado. El cron del server (checkRecurringEndings)
+-- avisa con la antelación que elija cada uno, y el webhook de notifications ya
+-- existente convierte esa notificación en correo.
+--
+-- Forma del jsonb: { "enabled": true, "leadDays": [7, 1] }
+--   leadDays = días de antelación EXACTOS (0 = el mismo día que termina).
+-- NULL = usuario que nunca lo tocó → el server aplica el default (7 y 1 día),
+-- así que la columna no necesita DEFAULT: la decisión vive en un solo sitio
+-- (normalizeAlertPrefs) y no en dos que puedan divergir.
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS recurring_end_alerts jsonb;

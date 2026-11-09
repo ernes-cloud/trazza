@@ -1,0 +1,162 @@
+# Trazza OSS — Docker Compose
+#
+# Profiles:
+#   cloud        — Express API + nginx (static dist). Supabase is external (Supabase Cloud).
+#   self-hosted  — Adds Postgres + GoTrue + PostgREST + Kong + one-shot migrations.
+#
+# Quick start (cloud):
+#   cp .env.example .env   # fill VITE_SUPABASE_* and SUPABASE_SERVICE_ROLE_KEY
+#   docker compose --profile cloud up --build
+#   Open http://localhost:8080
+#
+# Self-hosted: see docs/self-hosting.md (JWT keys, SITE_URL, ADMIN_EMAILS).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    profiles: [cloud, self-hosted]
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      WEB_STATIC_ROOT: /app/dist
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_APP_URL: ${VITE_APP_URL:-http://localhost:8080}
+        VITE_MARKET_DATA_PRIMARY: ${VITE_MARKET_DATA_PRIMARY:-}
+    profiles: [cloud, self-hosted]
+    environment:
+      # connect-src in CSP (nginx envsubst on start; default = Supabase Cloud wildcard).
+      CSP_SUPABASE_ORIGIN: ${CSP_SUPABASE_ORIGIN:-https://*.supabase.co}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  db:
+    image: supabase/postgres:15.8.1.060
+    profiles: [self-hosted]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  migrate:
+    image: postgres:16.8-alpine
+    profiles: [self-hosted]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/postgres
+      JWT_SECRET: ${JWT_SECRET:-}
+    volumes:
+      - ./supabase:/migrations:ro
+      - ./docker/migrate/apply-migrations.sh:/apply-migrations.sh:ro
+    entrypoint: ["/bin/sh", "/apply-migrations.sh"]
+    restart: "no"
+
+  auth:
+    image: supabase/gotrue:v2.151.0
+    profiles: [self-hosted]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/postgres
+      GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:8080}
+      GOTRUE_URI_ALLOW_LIST: ${SITE_URL:-http://localhost:8080}
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9999/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    profiles: [self-hosted]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-}
+      PGRST_SERVER_PORT: 3000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  kong:
+    image: kong:2.8.1
+    profiles: [self-hosted]
+    depends_on:
+      auth:
+        condition: service_healthy
+      rest:
+        condition: service_healthy
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+    volumes:
+      - ./docker/supabase/kong.yml:/var/lib/kong/kong.yml:ro
+    ports:
+      - "${SUPABASE_API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  db-data:
