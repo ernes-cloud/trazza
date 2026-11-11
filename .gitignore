@@ -120,6 +120,8 @@ debug_*
 *.png
 # Imagen de vista previa de la web (og:image): SÍ va al repo
 !public/og-image.png
+# README screenshots (synthetic demo UI, no real user data)
+!docs/images/*.png
 *.jpg
 *.jpeg
 *.gif
