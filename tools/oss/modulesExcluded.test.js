@@ -1,10 +1,11 @@
 /**
- * T3 (OSS): la versión self-hosted no debe enrutar ni montar los módulos de
- * negocio/SaaS que no tienen sentido fuera del host de producto SaaS: Gastos (feature
- * opt-in de pago), beta/allowlist, el embudo de activación (admin), la
- * landing/blog/legales (contenido de marketing del sitio público) y las
- * piezas de negocio del panel de admin (embudo, beta/allowlist, blog, stats
- * y logs). El OSS SÍ conserva un panel de admin básico de gestión de usuarios
+ * T3 + P0-1 (OSS): la versión self-hosted reintegra Gastos (UI, ruta cliente
+ * path="gastos", tablas y migraciones). Siguen fuera los módulos de negocio/SaaS
+ * que no tienen sentido fuera del host de producto: beta/allowlist, el embudo
+ * de activación (admin), la landing/blog/legales (contenido de marketing del
+ * sitio público) y las piezas de negocio del panel de admin (embudo,
+ * beta/allowlist, blog, stats y logs). Esta suite no debilita esas exclusiones.
+ * El OSS SÍ conserva un panel de admin básico de gestión de usuarios
  * y salud de proveedores (`/api/admin/users`, `/api/admin/health`): no están
  * en la lista de rutas prohibidas de más abajo.
  *
@@ -29,10 +30,13 @@ const ROOT = path.resolve(import.meta.dirname, '../..');
 const APP_JSX = path.join(ROOT, 'src/App.jsx');
 const SERVER_APP_JS = path.join(ROOT, 'server/app.js');
 
-// ── Front: src/App.jsx no debe referenciar estos módulos/rutas ──────────────
-const FORBIDDEN_FRONT_IDENTIFIERS = [
+// ── Front: Gastos vuelve al export; el resto de módulos no abiertos sigue fuera ──
+const REQUIRED_GASTOS_FRONT_IDENTIFIERS = [
   'ExpensesPage',
   'path="gastos"',
+];
+
+const FORBIDDEN_FRONT_IDENTIFIERS = [
   // D3: stats/logs/embudo/forzar precio. UI mínima /app/admin (AdminDashboard) SÍ es OSS.
   'FunnelPanel',
   'adminFunnel',
@@ -50,12 +54,31 @@ const FORBIDDEN_FRONT_IDENTIFIERS = [
   'TermsPage',
 ];
 
-describe('src/App.jsx — router front sin Gastos/embudo/landing/blog/legales (admin mínimo SÍ)', () => {
+describe('src/App.jsx — P0-1: el router front reintegra Gastos', () => {
   it('existe src/App.jsx', () => {
     expect(fs.existsSync(APP_JSX), 'falta src/App.jsx').toBe(true);
   });
 
   const src = fs.existsSync(APP_JSX) ? fs.readFileSync(APP_JSX, 'utf8') : '';
+
+  for (const needle of REQUIRED_GASTOS_FRONT_IDENTIFIERS) {
+    it(`referencia "${needle}" (Gastos en el export OSS)`, () => {
+      expect(src.includes(needle), `src/App.jsx no referencia "${needle}" (Gastos debe volver al export)`).toBe(true);
+    });
+  }
+});
+
+describe('src/App.jsx — router front sin embudo/landing/blog/legales (admin mínimo SÍ; Gastos permitido)', () => {
+  it('existe src/App.jsx', () => {
+    expect(fs.existsSync(APP_JSX), 'falta src/App.jsx').toBe(true);
+  });
+
+  const src = fs.existsSync(APP_JSX) ? fs.readFileSync(APP_JSX, 'utf8') : '';
+
+  it('la lista de exclusiones front ya no prohíbe Gastos', () => {
+    expect(FORBIDDEN_FRONT_IDENTIFIERS).not.toContain('ExpensesPage');
+    expect(FORBIDDEN_FRONT_IDENTIFIERS).not.toContain('path="gastos"');
+  });
 
   for (const needle of FORBIDDEN_FRONT_IDENTIFIERS) {
     it(`no referencia "${needle}"`, () => {
@@ -101,8 +124,9 @@ describe('src/App.jsx — router front sin Gastos/embudo/landing/blog/legales (a
 // resto de '/api/admin/users'. Por eso se usa la firma completa
 // "PATCH /api/admin/users/:userId/plan" como substring, no un genérico
 // '/api/admin/users' ni un '/plan' suelto que pudiera colarse en otra ruta.
+// Gastos es ruta de cliente (path="gastos"); no se exige ni se prohíbe
+// un endpoint de servidor '/gastos'. El resto de exclusiones se mantiene.
 const FORBIDDEN_SERVER_ROUTE_SUBSTRINGS = [
-  '/gastos',
   '/api/admin/funnel',
   '/api/admin/beta',
   '/api/admin/blog',
@@ -129,7 +153,7 @@ function listRoutePaths(app) {
   return paths;
 }
 
-describe('server/app.js — createApp() sin rutas de Gastos/beta/allowlist/embudo/blog-admin', () => {
+describe('server/app.js — createApp() sin rutas de beta/allowlist/embudo/blog-admin (Gastos no se prohíbe)', () => {
   it('existe server/app.js exportando createApp() (Express app sin .listen())', () => {
     expect(
       fs.existsSync(SERVER_APP_JS),
@@ -212,6 +236,40 @@ describe('server/app.js (createApp()) — no debería montar los handlers de bet
       ).toBe(false);
     });
   }
+});
+
+
+describe('P0-1 no debilita las exclusiones de los demás módulos', () => {
+  it('el front sigue prohibiendo embudo, landing, blog, legales y force-asset-price', () => {
+    const mustStay = [
+      'FunnelPanel',
+      'LandingPage',
+      'BlogPage',
+      'PrivacyPage',
+      'TermsPage',
+      'force-asset-price',
+    ];
+    const missing = mustStay.filter((id) => !FORBIDDEN_FRONT_IDENTIFIERS.includes(id));
+    expect(missing, `se han debilitado exclusiones front: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('el server sigue prohibiendo funnel, beta, blog, logs, stats, force-asset-price y PATCH plan', () => {
+    const mustStay = [
+      '/api/admin/funnel',
+      '/api/admin/beta',
+      '/api/admin/blog',
+      '/api/admin/logs',
+      '/api/admin/stats',
+      '/api/admin/force-asset-price',
+      'PATCH /api/admin/users/:userId/plan',
+    ];
+    const missing = mustStay.filter((id) => !FORBIDDEN_SERVER_ROUTE_SUBSTRINGS.includes(id));
+    expect(missing, `se han debilitado exclusiones server: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('FORBIDDEN_SERVER_ROUTE_SUBSTRINGS ya no incluye /gastos', () => {
+    expect(FORBIDDEN_SERVER_ROUTE_SUBSTRINGS).not.toContain('/gastos');
+  });
 });
 
 // ── Imports relativos rotos en src/ y server/ ───────────────────────────────

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useTranslation } from 'react-i18next';
-import { Save, Loader2, Eye, EyeOff, User, Globe, Plug, Mail } from 'lucide-react';
+import { Save, Loader2, Eye, EyeOff, User, Globe, Plug, Mail, PiggyBank } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -10,6 +10,8 @@ import { useUserPreferences } from '@/contexts/UserPreferencesContext';
 import { DEFAULT_CURRENCY } from '@/lib/preferredCurrency';
 import { useToast } from '@/components/ui/use-toast';
 import CurrencySelector from '@/components/CurrencySelector';
+import { useExpensesFeature } from '@/contexts/ExpensesFeatureContext';
+import { normalizeAlertPrefs, LEAD_DAY_OPTIONS } from '@/services/recurringEndAlerts';
 
 const SectionCard = ({ icon: Icon, title, description, children }) => (
   <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/40 shadow-xs overflow-hidden">
@@ -63,6 +65,7 @@ const SettingsPage = () => {
   const { t } = useTranslation();
   const { user } = useSupabaseAuth();
   const { toast } = useToast();
+  const { setExpensesEnabled, expensesAllowed } = useExpensesFeature();
   const [localSettings, setLocalSettings] = useState(null);
   const [saved, setSaved] = useState(false);
 
@@ -70,10 +73,14 @@ const SettingsPage = () => {
   // rellenan las columnas que la fila aún no tenga.
   const { preferences, loading: isLoading, savePreferences } = useUserPreferences();
   const dbSettings = preferences
-    ? { preferred_currency: DEFAULT_CURRENCY, eodhd_api_key: '', email_notifications_enabled: true, ...preferences }
+    ? { preferred_currency: DEFAULT_CURRENCY, eodhd_api_key: '', email_notifications_enabled: true, expenses_enabled: false, ...preferences }
     : null;
 
-  const settings = localSettings ?? dbSettings ?? { preferred_currency: DEFAULT_CURRENCY, eodhd_api_key: '', email_notifications_enabled: true, email_notify_dividends: true, email_notify_earnings: true, email_notify_alerts: true, email_notify_weekly_report: false };
+  const settings = localSettings ?? dbSettings ?? { preferred_currency: DEFAULT_CURRENCY, eodhd_api_key: '', email_notifications_enabled: true, email_notify_dividends: true, email_notify_earnings: true, email_notify_alerts: true, email_notify_weekly_report: false, expenses_enabled: false };
+
+  const recurringAlerts = normalizeAlertPrefs(settings.recurring_end_alerts);
+  const updateRecurringAlerts = (patch) =>
+    updateField('recurring_end_alerts', { ...recurringAlerts, ...patch });
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
@@ -81,6 +88,7 @@ const SettingsPage = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      setExpensesEnabled(!!settings.expenses_enabled);
       setLocalSettings(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -231,6 +239,91 @@ const SettingsPage = () => {
         )}
 
       </SectionCard>
+
+      {expensesAllowed && (
+      <SectionCard icon={PiggyBank} title={t('settings.features_title')} description={t('settings.features_desc')}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.expenses_toggle_label')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.expenses_toggle_hint')}</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!settings.expenses_enabled}
+            onClick={() => updateField('expenses_enabled', !settings.expenses_enabled)}
+            className={`relative shrink-0 inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              settings.expenses_enabled
+                ? 'bg-blue-600'
+                : 'bg-slate-200 dark:bg-slate-700'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition-transform ${
+                settings.expenses_enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+
+        {settings.expenses_enabled && (
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.recurring_end_title')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.recurring_end_hint')}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={recurringAlerts.enabled}
+                onClick={() => updateRecurringAlerts({ enabled: !recurringAlerts.enabled })}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  recurringAlerts.enabled ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition-transform ${
+                  recurringAlerts.enabled ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+
+            {recurringAlerts.enabled && (
+              <div className="mt-3">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('settings.recurring_end_lead_title')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {LEAD_DAY_OPTIONS.map((days) => {
+                    const active = recurringAlerts.leadDays.includes(days);
+                    return (
+                      <button
+                        key={days}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => updateRecurringAlerts({
+                          leadDays: active
+                            ? recurringAlerts.leadDays.filter((d) => d !== days)
+                            : [...recurringAlerts.leadDays, days].sort((a, b) => b - a),
+                        })}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                          active
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/30'
+                            : 'bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600'
+                        }`}
+                      >
+                        {t(`settings.recurring_end_lead_${days}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {recurringAlerts.leadDays.length === 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">{t('settings.recurring_end_none_selected')}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </SectionCard>
+      )}
 
       <div className="flex justify-end">
         <Button

@@ -18,7 +18,9 @@
 
 Trazza is a self-hostable app for tracking investment portfolios across brokers. Import transactions from CSV, value positions with live market data, and review performance with the same core metrics throughout the product: time-weighted return (TWR), FIFO cost basis, and Modified Dietz.
 
-This repository is the **OSS carve-out** (the portfolio app only). It does not ship the private monorepo’s marketing site, blog, expenses module, Stripe billing, or production ops docs.
+This repository is the **OSS carve-out** (the portfolio app + the Gastos/expenses module). It does not ship the private monorepo’s marketing site, blog, Stripe billing, or production ops docs.
+
+Gastos is a **universal opt-in**: any authenticated user with a non-empty email can enable it in Settings (`user_preferences.expenses_enabled`). User-facing notes: [docs/gastos.md](./docs/gastos.md).
 
 Screenshots below were taken in **Interactive Demo Mode** with built-in sample data (no real accounts).
 
@@ -38,6 +40,7 @@ Screenshots below were taken in **Interactive Demo Mode** with built-in sample d
 - 📡 **Market data** — Yahoo Finance by default, optional EODHD
 - 🤖 **Optional AI** — Groq-powered import validation, portfolio chat, and scoring, with env-based quotas
 - 👤 **Admin tools** — user list, import health, and manual snapshots (no paid plans)
+- 💸 **Gastos (expenses and savings)** — universal opt-in per user; see [docs/gastos.md](./docs/gastos.md)
 - 🧮 **Public calculators and broker guides** — compound interest, dividends, FIRE, capital gains, and broker tax tools
 
 <p align="center">

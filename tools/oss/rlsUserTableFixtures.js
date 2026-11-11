@@ -8,12 +8,14 @@
 import { U_A } from './rlsOssPgSetup.js';
 
 /** Número fijo: tablas public con user_id+RLS tras D3 (+ report_sends). */
-export const MIN_ISOLATION_TABLES = 13;
+export const MIN_ISOLATION_TABLES = 16;
 
 /** Tablas cubiertas, en orden alfabético (debe tener longitud MIN_ISOLATION_TABLES). */
 export const ISOLATION_TABLE_NAMES = [
   'ai_usage',
   'brokers',
+  'expense_entries',
+  'expense_projects',
   'imported_data',
   'notifications',
   'portfolio_alerts',
@@ -22,6 +24,7 @@ export const ISOLATION_TABLE_NAMES = [
   'portfolio_snapshots',
   'portfolios',
   'report_sends',
+  'savings_goals',
   'user_asset_preferences',
   'user_preferences',
   'watchlists',

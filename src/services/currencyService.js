@@ -29,7 +29,8 @@ export const currencyService = {
      * TTL: 10 minutes — short enough to pick up significant rate moves, long enough to prevent
      * jitter from multiple rapid reloads showing different portfolio values.
      */
-    async getExchangeRate(from, to) {
+    async getExchangeRate(from, to, options = {}) {
+        const allowFallback = options.allowFallback !== false;
         if (!from || !to || from === to) return 1;
 
         const pair = `${from}${to}=X`;
@@ -48,6 +49,7 @@ export const currencyService = {
         }
 
         // 3. Fetch from API
+        let fetchError = null;
         try {
             const quote = await yahooFinanceService.getQuote(pair);
             const rate = quote.current;
@@ -59,10 +61,13 @@ export const currencyService = {
                 return rate;
             }
         } catch (error) {
+            fetchError = error;
             console.error(`Error fetching exchange rate for ${pair}:`, error);
 
             // Return stale cached value if available rather than wrong fallback
             if (lsCached?.rate) return lsCached.rate;
+
+            if (!allowFallback) throw error;
 
             const fallbacks = {
                 'EURUSD=X': 1.08, 'USDEUR=X': 0.92,
@@ -73,6 +78,10 @@ export const currencyService = {
             if (fallbacks[pair]) return fallbacks[pair];
         }
 
+        if (!allowFallback) {
+            if (fetchError) throw fetchError;
+            return null;
+        }
         return 1;
     },
 

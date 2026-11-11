@@ -23,13 +23,15 @@ import { supabaseAdmin } from '../lib/adminSupabase.js';
 // Ticker map, pence handling and quote fetching live in the shared module
 // (also used by the portfolio snapshots cron).
 import { resolveTicker, getYahooQuotes } from '../lib/marketQuotes.js';
+import { computeRecurringEndAlerts } from '../lib/recurringEndAlerts.js';
 import { wantsEmail } from '../lib/emailPrefs.js';
+import { pingHeartbeat } from '../lib/heartbeat.js';
 import { madridDayStartUtc } from '../lib/emailQuota.js';
 import { fetchAllRows } from '../lib/fetchAllRows.js';
 import { evaluateWatchlistAlert } from '../lib/watchlistAlerts.js';
 import {
   langOf, exDividendNotice, dividendPaidNotice, earningsUpcomingNotice, earningsResultNotice,
-  priceTargetNotice, percentMoveNotice, portfolioMoveNotice,
+  priceTargetNotice, percentMoveNotice, portfolioMoveNotice, recurringEndNotice,
 } from '../lib/notificationText.js';
 import {
   getDividendFromYahoo, getEarningsFromYahoo, fetchDividendCalendar, fetchEarningsCalendar,
@@ -54,13 +56,38 @@ function isQuoteFresh(regularMarketTime) {
   return tradeDay === todayUTC;
 }
 
-// Fecha local de Madrid en 'YYYY-MM-DD'. El servidor corre en UTC y los avisos
-// son de calendario: con toISOString() una pasada a las 00:30 de Madrid
-// avisaría con la fecha de ayer.
+// Fecha local de calendario en 'YYYY-MM-DD'. El servidor corre en UTC y los
+// avisos son de calendario: con toISOString() una pasada a las 00:30 de la
+// zona avisaría con la fecha de ayer. APP_TIMEZONE must be a valid IANA zone;
+// anything else (including an empty value) falls back to UTC.
+function resolveAppTimeZone(raw = process.env.APP_TIMEZONE) {
+  const zone = typeof raw === 'string' ? raw.trim() : '';
+  if (!zone) return 'UTC';
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date());
+    return zone;
+  } catch {
+    return 'UTC';
+  }
+}
+
 function madridToday() {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: resolveAppTimeZone(), year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
+}
+
+const MIN_RECURRING_END_INTERVAL_MS = 60_000;
+const MAX_RECURRING_END_INTERVAL_MS = 2147483647;
+const DEFAULT_RECURRING_END_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/** Recurring-end cron interval. Invalid, non-finite, < 60s or > 2^31-1 → 6h. */
+function recurringEndIntervalMs() {
+  const n = Number(process.env.EXPENSES_RECURRING_END_INTERVAL_MS);
+  if (!Number.isFinite(n) || n < MIN_RECURRING_END_INTERVAL_MS || n > MAX_RECURRING_END_INTERVAL_MS) {
+    return DEFAULT_RECURRING_END_INTERVAL_MS;
+  }
+  return n;
 }
 
 // Built once per cron run, cleared before the next run
@@ -442,6 +469,40 @@ async function checkPortfolioAlerts() {
   }
 }
 
+
+async function checkRecurringEndings() {
+  console.log('[notificationCron] Running recurring-end check…');
+
+  const { data: templates, error } = await fetchAllRows(() => supabaseAdmin
+    .from('expense_entries')
+    .select('id, user_id, type, category, amount, notes, recurrence, recurrence_active, recurrence_until')
+    .eq('recurrence', 'monthly')
+    .not('recurrence_until', 'is', null)
+    .order('id'));
+
+  if (error) {
+    if (error.code === '42703' || error.code === '42P01') {
+      console.warn('[notificationCron] recurring-end check skipped (schema not migrated yet)');
+      return;
+    }
+    console.error('[notificationCron] Failed to load recurring templates:', error.message);
+    return;
+  }
+  if (!templates?.length) return;
+
+  const userIds = [...new Set(templates.map((t) => t.user_id).filter(Boolean))];
+  const prefsByUser = {};
+  for (const id of userIds) prefsByUser[id] = (await userPrefs(id))?.recurring_end_alerts;
+  const alerts = computeRecurringEndAlerts({ templates, prefsByUser, today: madridToday() });
+
+  for (const a of alerts) {
+    const n = recurringEndNotice({ ...a, lang: await langFor(a.userId) });
+    await insertNotification(a.userId, n.title, n.message, n.type, n.dedup);
+  }
+
+  console.log(`[notificationCron] recurring-end: ${alerts.length} aviso(s)`);
+}
+
 // ─── Scheduler ────────────────────────────────────────────────────────────────
 
 // Una pasada lenta (Yahoo con 429, Supabase lento) no puede solaparse con la
@@ -472,15 +533,18 @@ export function startNotificationCron() {
   const runDivEarn = exclusive('dividends/earnings', async () => {
     _divCalCache = null;  // fresh Nasdaq data each run
     _earnCalCache = null;
-    await checkDividendsAndEarnings();
+    const ok = await checkDividendsAndEarnings();
+    if (ok) pingHeartbeat('HEARTBEAT_NOTIFICATIONS_URL');
   });
   const runWatchlist = exclusive('watchlist', checkWatchlistAlerts);
   const runPortfolio = exclusive('portfolio', checkPortfolioAlerts);
+  const runRecurringEnd = exclusive('recurring-end', checkRecurringEndings);
 
   // Run immediately on startup
   runDivEarn();
   runWatchlist();
   runPortfolio();
+  runRecurringEnd();
 
   // Dividends/earnings every 6 hours
   setInterval(runDivEarn, 6 * 60 * 60 * 1000);
@@ -490,4 +554,6 @@ export function startNotificationCron() {
 
   // Portfolio-level alert every 15 minutes
   setInterval(runPortfolio, 15 * 60 * 1000);
+
+  setInterval(runRecurringEnd, recurringEndIntervalMs());
 }

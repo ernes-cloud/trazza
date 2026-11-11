@@ -17,7 +17,7 @@
 
 import { extractFundSectorWeights } from './fundExposure';
 
-const LS_KEY = 'wf_fund_sectors_v1';
+const LS_KEY = 'wf_fund_sectors_v1'; // gitleaks:allow
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10_000;
 const PAUSE_MS = 150;

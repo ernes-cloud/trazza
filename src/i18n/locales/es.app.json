@@ -401,7 +401,14 @@
     "cat_freelance": "Trabajo autónomo",
     "cat_investment_income": "Inversiones",
     "cat_rental": "Alquileres",
-    "cat_gift": "Regalos"
+    "cat_gift": "Regalos",
+    "csv_amount_original": "Importe original",
+    "csv_converted": "Importe convertido",
+    "csv_currency_original": "Moneda original",
+    "csv_not_convertible": "no convertible",
+    "not_convertible_desc": "{{count}} movimiento(s) no tienen tipo de cambio usable y quedan fuera de los totales (no se suman en crudo).",
+    "pagination_cap_desc": "Hay más de {{max}} movimientos; no se actualizaron los totales ni las claves de importación para no truncar en silencio.",
+    "pagination_cap_title": "No se pudieron cargar todos los gastos"
   },
   "notifications_page": {
     "page_title": "Notificaciones – Trazza",

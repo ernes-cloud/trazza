@@ -12,8 +12,8 @@
  * - Toda escritura pasa por `savePreferences(patch)`: hace el upsert y, SOLO si
  *   va bien, mezcla el cambio en el estado — así todas las superficies ven el
  *   valor nuevo sin releer, y un fallo no deja en pantalla un dato que no existe.
- * - `plan` es una columna de AUTORIZACIÓN que el cliente no puede cambiar (trigger
- *   guard_plan_column); reenviarla con el mismo valor está permitido.
+ * - En este árbol OSS no hay columna `plan` ni trigger de plan: los elimina
+ *   `20261107000200_oss_cleanup_plan.sql`. El cliente no envía ni lee `plan`.
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';

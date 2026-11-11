@@ -30,8 +30,8 @@ export const DASHBOARD_WIDGETS = [
  *
  * Apagado por decisión del owner: la pantalla principal es la cartera y los
  * widgets de gastos la llenaban de otra cosa. La PANTALLA `/app/gastos` no se
- * ve afectada — sigue colgando de `expenses_enabled` + la lista de cuentas de
- * `lib/expensesAccess`.
+ * ve afectada — sigue colgando de `expenses_enabled` y de
+ * `isExpensesFeatureAllowed` (opt-in universal: cualquier email no vacío).
  *
  * Se conservan el registry de abajo y sus componentes porque volver a
  * encenderlos es poner esto a `true`: el layout resuelto ya está probado en

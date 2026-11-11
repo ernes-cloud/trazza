@@ -13,9 +13,9 @@ DROP FUNCTION IF EXISTS public.force_asset_price(uuid, numeric, text, uuid);
 
 -- ── Tablas (orden: hijas antes que padres cuando aplica) ───────────────────
 DROP TABLE IF EXISTS public.asset_price_force_log CASCADE;
-DROP TABLE IF EXISTS public.expense_entries CASCADE;
-DROP TABLE IF EXISTS public.expense_projects CASCADE;
-DROP TABLE IF EXISTS public.savings_goals CASCADE;
+-- P0-1: Gastos reintegrado; DROP de expense_entries omitido en el export
+-- P0-1: Gastos reintegrado; DROP de expense_projects omitido en el export
+-- P0-1: Gastos reintegrado; DROP de savings_goals omitido en el export
 DROP TABLE IF EXISTS public.beta_access CASCADE;
 DROP TABLE IF EXISTS public.beta_allowlist CASCADE;
 DROP TABLE IF EXISTS public.blog_posts CASCADE;

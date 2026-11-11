@@ -45,6 +45,8 @@ import {
   isTablePrivilegeDenied,
   runAsAuthenticated,
   authenticatedSelectCount,
+  listMigrationFiles,
+  applyMigrationFile,
   U_A as FIXTURE_U_A,
 } from './rlsOssPgSetup.js';
 import {
@@ -57,8 +59,6 @@ import {
 } from './rlsUserTableFixtures.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const MIGRATIONS_DIR = path.join(ROOT, 'supabase/migrations');
-
 const describePg = pgDescribe(describe);
 
 const U_A = FIXTURE_U_A;
@@ -105,13 +105,6 @@ function findBaselineFiles() {
   return null;
 }
 
-function listMigrationFiles() {
-  if (!fs.existsSync(MIGRATIONS_DIR)) return [];
-  return fs.readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith('.sql'))
-    .sort()
-    .map((f) => path.join(MIGRATIONS_DIR, f));
-}
 
 const BASELINE_MISSING_MSG = 'falta baseline: crea supabase/baseline/schema.sql (o supabase/baseline/*.sql) '
   + 'con un volcado del esquema de Supabase (tablas núcleo + políticas) — hoy ese esquema solo existe '
@@ -152,7 +145,7 @@ describePg('RLS baseline OSS — esquema completo + migraciones contra Postgres 
     try {
       pg.psql(ROLE_BOOTSTRAP_SQL);
       for (const f of baselineFiles) pg.psqlFile(f);
-      for (const f of migrationFiles) pg.psqlFile(f);
+      for (const f of migrationFiles) applyMigrationFile(pg, f);
     } catch (e) {
       setupError = `fallo aplicando baseline + migraciones: ${e.message}`;
     }
@@ -178,7 +171,7 @@ describePg('RLS baseline OSS — esquema completo + migraciones contra Postgres 
     if (setupError) { expect(setupError, 'el montaje inicial ya falló; no se reintenta').toBeNull(); return; }
     let err = null;
     try {
-      for (const f of migrationFiles) pg.psqlFile(f);
+      for (const f of migrationFiles) applyMigrationFile(pg, f);
     } catch (e) {
       err = e.stderr || e.message;
     }

@@ -403,6 +403,186 @@ function rewriteSanitizerSuiteExportCopy(source) {
   return out;
 }
 
+
+// ── P0-1: reintegra Gastos en el árbol exportado sin editar SQL publicado en origen.
+
+const OSS_UNIVERSAL_EXPENSES_ACCESS = `/**
+ * OSS: Gastos is a universal opt-in. Any authenticated user can enable the
+ * module via user_preferences.expenses_enabled. There is no owner, admin or
+ * beta allowlist, and this file contains no personal emails.
+ */
+export function isExpensesFeatureAllowed(email) {
+  return typeof email === 'string' && email.trim().length > 0;
+}
+`;
+
+const OSS_UNIVERSAL_EXPENSES_ACCESS_TEST = `import { describe, it, expect } from 'vitest';
+import { isExpensesFeatureAllowed } from './expensesAccess';
+
+describe('isExpensesFeatureAllowed (OSS opt-in universal)', () => {
+  it('acepta cualquier email no vacío', () => {
+    expect(isExpensesFeatureAllowed('user@example.com')).toBe(true);
+    expect(isExpensesFeatureAllowed('another.person@example.org')).toBe(true);
+  });
+
+  it('sin email no hay feature', () => {
+    expect(isExpensesFeatureAllowed(undefined)).toBe(false);
+    expect(isExpensesFeatureAllowed(null)).toBe(false);
+    expect(isExpensesFeatureAllowed('')).toBe(false);
+    expect(isExpensesFeatureAllowed('   ')).toBe(false);
+  });
+});
+`;
+
+const OSS_GASTOS_USER_DOC = `# Gastos (self-hosted)
+
+The Gastos (expenses and savings) module is included in this OSS export.
+It is available to every authenticated user: there is no admin, beta or
+owner allowlist. Each user enables it with the opt-in
+\`user_preferences.expenses_enabled\`.
+
+Tables: \`expense_entries\`, \`expense_projects\`, \`savings_goals\` and
+\`user_preferences\`, with row level security and policies for the
+\`authenticated\` role.
+
+Recurring-end notification cron (optional env):
+
+- \`APP_TIMEZONE\` (IANA timezone, default UTC)
+- \`EXPENSES_RECURRING_END_INTERVAL_MS\` (interval in milliseconds)
+
+This is export-only documentation. It does not include
+\`docs/claude/expenses.md\` from the product repo.
+`;
+
+export function filterOssRemoveModulesGastosDrops(content) {
+  return content.replace(
+    /^[ \t]*DROP\s+TABLE\s+IF\s+EXISTS\s+(?:public\.)?(expense_entries|expense_projects|savings_goals)\b[^;]*;[ \t]*$/gim,
+    '-- P0-1: Gastos reintegrado; DROP de $1 omitido en el export',
+  );
+}
+
+function insertAfterLastImport(content, block) {
+  const re = /^import\s[\s\S]*?;$/gm;
+  let last = null;
+  let m;
+  while ((m = re.exec(content))) last = m;
+  if (!last) return `${block}\n${content}`;
+  const at = last.index + last[0].length;
+  return `${content.slice(0, at)}\n\n${block}${content.slice(at)}`;
+}
+
+function ensureGastosCronHelpers(content) {
+  let out = content;
+  if (!/function\s+resolveAppTimeZone\s*\(/.test(out)) {
+    out = insertAfterLastImport(out, `function resolveAppTimeZone(raw = process.env.APP_TIMEZONE) {
+  const zone = typeof raw === 'string' ? raw.trim() : '';
+  if (!zone) return 'UTC';
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date());
+    return zone;
+  } catch {
+    return 'UTC';
+  }
+}
+`);
+  }
+  if (!/function\s+recurringEndIntervalMs\s*\(/.test(out)) {
+    out = insertAfterLastImport(out, `const MIN_RECURRING_END_INTERVAL_MS = 60_000;
+const MAX_RECURRING_END_INTERVAL_MS = 2147483647;
+const DEFAULT_RECURRING_END_INTERVAL_MS = 6 * 60 * 60 * 1000;
+function recurringEndIntervalMs() {
+  const n = Number(process.env.EXPENSES_RECURRING_END_INTERVAL_MS);
+  if (!Number.isFinite(n) || n < MIN_RECURRING_END_INTERVAL_MS || n > MAX_RECURRING_END_INTERVAL_MS) {
+    return DEFAULT_RECURRING_END_INTERVAL_MS;
+  }
+  return n;
+}
+`);
+  }
+  return out;
+}
+
+function parametrizeGastosCron(content) {
+  let out = content;
+  out = out.replace(/timeZone:\s*'Europe\/Madrid'/g, 'timeZone: resolveAppTimeZone()');
+  out = out.replace(/timeZone:\s*process\.env\.APP_TIMEZONE\s*\|\|\s*'UTC'/g, 'timeZone: resolveAppTimeZone()');
+  out = out.replace(/['"]Europe\/Madrid['"]/g, 'resolveAppTimeZone()');
+  out = out.replace(
+    /setInterval\(\s*runRecurringEnd\s*,\s*Number\(\s*process\.env\.EXPENSES_RECURRING_END_INTERVAL_MS\s*\)\s*\|\|\s*6\s*\*\s*60\s*\*\s*60\s*\*\s*1000\s*\)/g,
+    'setInterval(runRecurringEnd, recurringEndIntervalMs())',
+  );
+  out = out.replace(
+    /setInterval\(\s*runRecurringEnd\s*,\s*6\s*\*\s*60\s*\*\s*60\s*\*\s*1000\s*\)/g,
+    'setInterval(runRecurringEnd, recurringEndIntervalMs())',
+  );
+  return ensureGastosCronHelpers(out);
+}
+
+export function filterP02OssPlanGuardGrants(content) {
+  // OSS may have dropped guard_user_preferences_plan in 20261107000200_oss_cleanup_plan.sql.
+  // Published P0-2 SQL is not edited in origin. The export wraps those GRANT/REVOKE
+  // so a full OSS chain still applies, while Gastos-only fixtures that still have
+  // the function (and the migrationGrants scan) still see GRANT EXECUTE.
+  const guarded = `-- P0-1: aplicar GRANT/REVOKE de guard_user_preferences_plan solo si existe
+DO $oss_p01_plan_guard$
+BEGIN
+  IF to_regprocedure('public.guard_user_preferences_plan()') IS NOT NULL THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.guard_user_preferences_plan() FROM PUBLIC';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.guard_user_preferences_plan() TO authenticated';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.guard_user_preferences_plan() TO service_role';
+  END IF;
+END
+$oss_p01_plan_guard$;
+`;
+  const re = /[ \t]*REVOKE ALL ON FUNCTION public\.guard_user_preferences_plan\(\) FROM PUBLIC;[ \t]*\n(?:[ \t]*\n)?[ \t]*GRANT EXECUTE ON FUNCTION public\.guard_user_preferences_plan\(\) TO authenticated;[ \t]*\n[ \t]*GRANT EXECUTE ON FUNCTION public\.guard_user_preferences_plan\(\) TO service_role;[ \t]*\n?/i;
+  if (re.test(content)) return content.replace(re, guarded);
+  return content
+    .replace(/^[ \t]*REVOKE ALL ON FUNCTION public\.guard_user_preferences_plan\(\) FROM PUBLIC;[ \t]*$/gim, '-- P0-1: guard_user_preferences_plan no existe en OSS; REVOKE omitido')
+    .replace(/^[ \t]*GRANT EXECUTE ON FUNCTION public\.guard_user_preferences_plan\(\) TO authenticated;[ \t]*$/gim, '-- P0-1: guard_user_preferences_plan no existe en OSS; GRANT omitido')
+    .replace(/^[ \t]*GRANT EXECUTE ON FUNCTION public\.guard_user_preferences_plan\(\) TO service_role;[ \t]*$/gim, '-- P0-1: guard_user_preferences_plan no existe en OSS; GRANT omitido');
+}
+
+/** Same in-memory transforms the export applies to origin migrations.
+ * Published SQL on disk is never edited. Used by the origin test:pg harness
+ * so the oss-merge chain can be applied in tests the same way as the export. */
+export function filterOssPgMigrationContent(content, filename) {
+  const base = path.basename(filename);
+  if (base === '20261107001100_oss_remove_modules.sql') {
+    return filterOssRemoveModulesGastosDrops(content);
+  }
+  if (base === '20261111000100_expense_ownership_rls_grants.sql') {
+    return filterP02OssPlanGuardGrants(content);
+  }
+  return content;
+}
+
+function applyGastosOssPort(content, relPath) {
+  const norm = relPath.split(path.sep).join('/');
+  if (norm.startsWith('supabase/migrations/') && norm.endsWith('.sql')) {
+    return filterOssPgMigrationContent(content, norm);
+  }
+  if (norm === 'src/lib/expensesAccess.js') return OSS_UNIVERSAL_EXPENSES_ACCESS;
+  if (norm === 'src/lib/expensesAccess.test.js') return OSS_UNIVERSAL_EXPENSES_ACCESS_TEST;
+  if (norm === 'server/jobs/notificationCron.js') return parametrizeGastosCron(content);
+  if (norm === 'src/services/fundSectors.js') {
+    // .gitleaksignore uses a relative fingerprint; TDD runs
+    // `gitleaks detect --no-git --source <abs>` from another cwd, so the
+    // ignore misses. An allow comment makes the known localStorage-key
+    // false positive pass regardless of how the path is written.
+    return content.replace(
+      /^(\s*const LS_KEY = '[^']+';)(?!.*gitleaks:allow)\s*$/m,
+      '$1 // gitleaks:allow',
+    );
+  }
+  return content;
+}
+
+function ensureGastosUserDocs(targetDir) {
+  const dest = path.join(targetDir, 'docs/gastos.md');
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  if (!fs.existsSync(dest)) fs.writeFileSync(dest, OSS_GASTOS_USER_DOC);
+}
+
 function copyTrackedFile(relPath, targetDir) {
   const src = path.join(REPO_ROOT, relPath);
   const dest = path.join(targetDir, relPath);
@@ -431,7 +611,7 @@ function copyTrackedFile(relPath, targetDir) {
     fs.writeFileSync(dest, rewriteSanitizerSuiteExportCopy(content));
     return;
   }
-  fs.writeFileSync(dest, sanitizeOssExportCopy(content, relPath));
+  fs.writeFileSync(dest, applyGastosOssPort(sanitizeOssExportCopy(content, relPath), relPath));
 }
 
 function mergeGitignore(targetDir) {
@@ -485,6 +665,7 @@ function runExport() {
     copied += 1;
   }
 
+  ensureGastosUserDocs(targetDir);
   mergeGitignore(targetDir);
   ensureDockerignore(targetDir);
 

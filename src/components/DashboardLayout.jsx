@@ -21,6 +21,7 @@ import {
   Calculator,
   History,
   ShieldCheck,
+  PiggyBank,
 } from 'lucide-react';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -33,6 +34,7 @@ import GlobalSearchBar from './search/GlobalSearchBar';
 import CompoundInterestCalculator from './CompoundInterestCalculator';
 import { PrivacyModeProvider, usePrivacyMode } from '@/contexts/PrivacyModeContext';
 import { useUserPreferences } from '@/contexts/UserPreferencesContext';
+import { ExpensesFeatureProvider, useExpensesFeature } from '@/contexts/ExpensesFeatureContext';
 import { PortfolioDataProvider } from '@/contexts/PortfolioDataContext';
 import { useTranslation } from 'react-i18next';
 
@@ -60,6 +62,7 @@ const DashboardLayoutInner = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { privacyMode, togglePrivacyMode } = usePrivacyMode();
+  const { expensesEnabled } = useExpensesFeature();
   const [darkMode, setDarkMode] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -95,6 +98,7 @@ const DashboardLayoutInner = () => {
     { icon: LayoutDashboard, label: t('nav.dashboard'),  path: '/app' },
     { icon: Wallet,           label: t('nav.brokers'),    path: '/app/brokers' },
     { icon: Star,             label: t('nav.favorites'),  path: '/app/favorites' },
+    ...(expensesEnabled ? [{ icon: PiggyBank, label: t('nav.expenses'), path: '/app/gastos' }] : []),
   ];
 
   // ─── Click-outside handlers ───────────────────────────────────────────────
@@ -770,7 +774,9 @@ const DashboardLayout = () => {
   return (
     <PortfolioDataProvider>
       <PrivacyModeProvider userId={user?.id}>
-        <DashboardLayoutInner />
+        <ExpensesFeatureProvider userId={user?.id} userEmail={user?.email}>
+          <DashboardLayoutInner />
+        </ExpensesFeatureProvider>
       </PrivacyModeProvider>
     </PortfolioDataProvider>
   );

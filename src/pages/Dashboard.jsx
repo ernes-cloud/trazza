@@ -8,6 +8,7 @@ import { Helmet } from 'react-helmet';
 import {
   DollarSign, TrendingUp, TrendingDown, Loader2, Filter, RefreshCw, Share2, LayoutGrid, ChevronDown, Check, Plus
 } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import PortfolioTreemap from '@/components/PortfolioTreemap';
@@ -15,8 +16,12 @@ import ExpandableWidget, { ExpandAware } from '@/components/ExpandableWidget';
 import DashboardCustomizer from '@/components/dashboard/DashboardCustomizer';
 import {
   resolveDashboardLayout, serializeLayout, DASHBOARD_WIDGETS,
+  DASHBOARD_EXPENSE_WIDGETS_ENABLED,
   resolvePairs, applyPairAdjacency, computeRenderGroups, DEFAULT_DASHBOARD_ORDER, layoutForEmptyPortfolio,
 } from '@/services/dashboardLayout';
+import { useExpensesFeature } from '@/contexts/ExpensesFeatureContext';
+import { fetchDashboardExpenseRows } from '@/services/expenses/paginatedFetch';
+import { applyDashboardExpenseRowsResult } from '@/services/expenses/expenseFetchResult';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
@@ -54,6 +59,17 @@ const Dashboard = () => {
     exchangeRates: exchangeRatesDB, portfolioData, fundSectorWeights, reload: loadDashboardData,
   } = useDashboardData(user);
   const { savePreferences } = useUserPreferences();
+  const { expensesEnabled } = useExpensesFeature();
+  const showExpenseWidgets = expensesEnabled && DASHBOARD_EXPENSE_WIDGETS_ENABLED;
+  const [expenseRows, setExpenseRows] = useState([]);
+  const fetchExpenseRows = useCallback(async () => {
+    if (!showExpenseWidgets || !user?.id) { setExpenseRows([]); return; }
+    // expense_entries — paginado (fetchDashboardExpenseRows / fetchAllRows)
+    const result = await fetchDashboardExpenseRows(supabase, user.id);
+    applyDashboardExpenseRowsResult(result, { setExpenseRows, toast, t });
+  }, [showExpenseWidgets, user?.id, toast, t]);
+  useEffect(() => { fetchExpenseRows(); }, [fetchExpenseRows]);
+  void expenseRows;
 
   const [savedWidgets, setSavedWidgets] = useState(null);
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);

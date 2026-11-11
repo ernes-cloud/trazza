@@ -401,7 +401,14 @@
     "cat_freelance": "Freelance",
     "cat_investment_income": "Investments",
     "cat_rental": "Rentals",
-    "cat_gift": "Gifts"
+    "cat_gift": "Gifts",
+    "csv_amount_original": "Original amount",
+    "csv_converted": "Converted amount",
+    "csv_currency_original": "Original currency",
+    "csv_not_convertible": "not convertible",
+    "not_convertible_desc": "{{count}} entry/entries have no usable exchange rate and are excluded from totals (not summed raw).",
+    "pagination_cap_desc": "More than {{max}} movements were found; totals and imports were not updated so nothing is silently truncated.",
+    "pagination_cap_title": "Could not load all expenses"
   },
   "notifications_page": {
     "page_title": "Notifications – Trazza",

@@ -3,9 +3,11 @@
  * Solo Postgres embebido (initdb local) — nunca PGHOST remoto/CI en este harness.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startIsolatedRlsPg as startDisposablePg } from './pgPortLease.js';
+import { filterOssPgMigrationContent } from './export-oss.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const MIGRATIONS_DIR = path.join(ROOT, 'supabase/migrations');
@@ -88,6 +90,23 @@ export function listMigrationFiles() {
     .map((f) => path.join(MIGRATIONS_DIR, f));
 }
 
+/** Published SQL is never edited. Origin test:pg applies the same in-memory
+ * filters the exporter uses (Gastos DROPs in 20261107001100_oss_remove_modules
+ * and plan-guard GRANT/REVOKE in 20261111000100). */
+export function applyMigrationFile(pg, absPath) {
+  const raw = fs.readFileSync(absPath, 'utf8');
+  const filtered = filterOssPgMigrationContent(raw, absPath);
+  if (filtered === raw) return pg.psqlFile(absPath);
+  const tmp = path.join(os.tmpdir(), `oss-pg-mig-${process.pid}-${path.basename(absPath)}`);
+  fs.writeFileSync(tmp, filtered);
+  try {
+    return pg.psqlFile(tmp);
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
+}
+
+
 const BASELINE_MISSING_MSG = 'falta baseline: supabase/baseline/schema.sql (u otros bajo supabase/baseline/)';
 
 /** Última línea no vacía de stdout psql (-t -A), evita basura de NOTICE/SET. */
@@ -153,7 +172,7 @@ export function mountOssRlsDatabase(options = {}) {
   try {
     pg.psql(ROLE_BOOTSTRAP_SQL);
     for (const f of baselineFiles) pg.psqlFile(f);
-    for (const f of listMigrationFiles()) pg.psqlFile(f);
+    for (const f of listMigrationFiles()) applyMigrationFile(pg, f);
     if (typeof options.extraSql === 'string' && options.extraSql.trim()) {
       pg.psql(options.extraSql);
     }

@@ -69,6 +69,7 @@ const RebalancingCalculator= lazy(() => import('@/pages/RebalancingCalculator'))
 const BacktestPage         = lazy(() => import('@/pages/BacktestPage'));
 const SettingsPage         = lazy(() => import('@/pages/SettingsPage'));
 const AdminDashboard       = lazy(() => import('@/pages/AdminDashboard'));
+const ExpensesPage         = lazy(() => import('@/pages/ExpensesPage'));
 
 function RouteFallback() {
   return (
@@ -103,6 +104,7 @@ export function appRouteElements() {
         <Route path="backtest" element={<BacktestPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="admin" element={<ErrorBoundary title="Admin"><AdminDashboard /></ErrorBoundary>} />
+        <Route path="gastos" element={<ErrorBoundary><ExpensesPage /></ErrorBoundary>} />
         {appRedirectRoutes()}
       </Route>
 
